@@ -2,8 +2,17 @@
 <html lang="uz" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Nasiya.uz — Do'konlar uchun elektron qarz daftari | by: Valiyev</title>
+
+    <!-- PWA & iOS "На экран Домой" Meta teglari -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nasiya.uz">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10149/10149458.png">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -37,8 +46,8 @@
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
+            padding-top: env(safe-area-inset-top);
         }
-        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -66,7 +75,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200 pb-24 md:pb-8">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200 pb-24 md:pb-8 select-none">
 
     <!-- TOP HEADER -->
     <header class="sticky top-0 z-30 glass-header bg-white/85 dark:bg-slate-900/85 border-b border-slate-200/80 dark:border-slate-800/80">
@@ -97,13 +106,18 @@
                 <button onclick="switchTab('pos')" id="nav-pos" class="nav-btn px-4 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                     <i class="fa-solid fa-calculator mr-1.5"></i>Tezkor Nasiya (Kassa)
                 </button>
-                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn px-4 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <button onclick="handleAnalyticsTabClick()" id="nav-analytics" class="nav-btn px-4 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                     <i class="fa-solid fa-chart-pie mr-1.5"></i>Tahlil va Sozlamalar
                 </button>
             </nav>
 
             <!-- Action Icons -->
             <div class="flex items-center gap-2">
+                <!-- Aloqa uchun tugmasi -->
+                <button onclick="openContactModal()" class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition" title="Muallif bilan aloqa">
+                    <i class="fa-solid fa-headset"></i>
+                </button>
+
                 <!-- Overdue Bell -->
                 <button onclick="filterByOverdueAndScroll()" class="relative p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Muddati o'tgan qarzdorlar">
                     <i class="fa-solid fa-bell"></i>
@@ -127,7 +141,7 @@
     <!-- MAIN CONTENT CONTAINER -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
 
-        <!-- KPI SUMMARY CARDS (Always visible on top of Dashboard) -->
+        <!-- KPI SUMMARY CARDS -->
         <section id="kpiSection" class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <!-- Total Active Debt -->
             <div class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden">
@@ -188,7 +202,6 @@
 
         <!-- ==================== TAB 1: DASHBOARD & DEBTORS LIST ==================== -->
         <section id="tab-dashboard" class="space-y-4">
-            <!-- Search, Filter & Quick Bar -->
             <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
                 <div class="flex flex-col md:flex-row gap-3 justify-between">
                     <!-- Search Input -->
@@ -244,9 +257,7 @@
             </div>
 
             <!-- Customer Cards Grid -->
-            <div id="customersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Populated dynamically via JS -->
-            </div>
+            <div id="customersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
             <!-- Empty State -->
             <div id="emptyState" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-10 text-center">
@@ -280,9 +291,7 @@
                     </div>
 
                     <!-- Quick Preset Product Grid -->
-                    <div id="quickProductsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        <!-- Dynamically rendered preset items -->
-                    </div>
+                    <div id="quickProductsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
 
                     <!-- Custom Item Entry Row -->
                     <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -311,17 +320,13 @@
                                 <label class="text-xs font-semibold text-slate-600 dark:text-slate-300">Mijozni tanlang *</label>
                                 <button onclick="openNewCustomerModal()" class="text-xs text-emerald-500 font-semibold hover:underline">+ Yangi mijoz ochish</button>
                             </div>
-                            <select id="posCustomerSelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium outline-none focus:border-emerald-500">
-                                <!-- Populated via JS -->
-                            </select>
+                            <select id="posCustomerSelect" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium outline-none focus:border-emerald-500"></select>
                         </div>
 
                         <!-- Cart Items List -->
                         <div>
                             <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 block mb-1.5">Tanlangan mahsulotlar ro'yxati</label>
-                            <div id="posCartList" class="max-h-48 overflow-y-auto space-y-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800">
-                                <!-- Cart items -->
-                            </div>
+                            <div id="posCartList" class="max-h-48 overflow-y-auto space-y-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800"></div>
                         </div>
 
                         <!-- Due Date & Note -->
@@ -357,10 +362,15 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Debt Recovery & Overview -->
                 <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-5">
-                    <h3 class="text-lg font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line text-emerald-500"></i>
-                        Do'kon Moliya va Nasiya Tahlili
-                    </h3>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-emerald-500"></i>
+                            Do'kon Moliya va Nasiya Tahlili
+                        </h3>
+                        <span id="adminUnlockedBadge" class="hidden px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 text-[11px] font-extrabold border border-amber-500/30">
+                            🔓 PRO ADMIN FAOL
+                        </span>
+                    </div>
 
                     <!-- Recovery Progress Bar -->
                     <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 space-y-2">
@@ -380,9 +390,7 @@
                     <!-- Top 5 Debtors List -->
                     <div>
                         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Eng katta qarzdor mijozlar (Top 5)</h4>
-                        <div id="topDebtorsList" class="space-y-2.5">
-                            <!-- Populated via JS -->
-                        </div>
+                        <div id="topDebtorsList" class="space-y-2.5"></div>
                     </div>
                 </div>
 
@@ -404,9 +412,21 @@
                         </div>
                     </div>
 
-                    <!-- Export Options -->
+                    <!-- Aloqa va O'rnatish -->
+                    <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                        <button onclick="openContactModal()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-phone-volume"></i>
+                            Aloqa uchun (Valiyev Yorqinbek)
+                        </button>
+                        <button onclick="openInstallGuideModal()" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                            Telefon ekraniga o'rnatish (На экран Домой)
+                        </button>
+                    </div>
+
+                    <!-- Export & Import Options -->
                     <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-                        <label class="text-xs font-semibold text-slate-500 block">Ma'lumotlarni yuklab olish (Hisobot)</label>
+                        <label class="text-xs font-semibold text-slate-500 block">Ma'lumotlarni yuklab olish va tiklash</label>
                         
                         <button onclick="exportToCSV()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center justify-center gap-2 transition">
                             <i class="fa-solid fa-file-csv text-base"></i>
@@ -415,13 +435,19 @@
 
                         <button onclick="exportToJSON()" class="w-full py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold flex items-center justify-center gap-2 transition">
                             <i class="fa-solid fa-download text-base"></i>
-                            To'liq zaxira nusxa (JSON Backup)
+                            To'liq zaxira nusxa olish (JSON Backup)
                         </button>
+
+                        <label class="w-full py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer">
+                            <i class="fa-solid fa-upload text-base"></i>
+                            <span>Zaxira faylni qayta yuklash (JSON Import)</span>
+                            <input type="file" accept=".json" class="hidden" onchange="importFromJSON(event)">
+                        </label>
                     </div>
 
                     <!-- Reset Demo Data -->
                     <div class="pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <p class="text-[11px] text-slate-400 mb-2">Barcha ma'lumotlar qurilmangiz xotirasida (LocalStorage) xavfsiz saqlanadi.</p>
+                        <p class="text-[11px] text-slate-400 mb-2">🔒 «Tahlil» tugmasini 5 marta bosib Admin parolni (Valiyev20) kiritsangiz, maxfiy himoya ochiladi.</p>
                         <button onclick="resetDemoData()" class="w-full py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-semibold transition">
                             <i class="fa-solid fa-rotate-left mr-1"></i> Boshlang'ich demo holatga qaytarish
                         </button>
@@ -445,7 +471,7 @@
         <button onclick="openNewCustomerModal()" class="flex items-center justify-center w-12 h-12 -mt-5 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/30 active:scale-95 transition">
             <i class="fa-solid fa-user-plus text-lg"></i>
         </button>
-        <button onclick="switchTab('analytics')" id="mnav-analytics" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-slate-500 dark:text-slate-400 font-medium text-xs">
+        <button onclick="handleAnalyticsTabClick()" id="mnav-analytics" class="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-slate-500 dark:text-slate-400 font-medium text-xs">
             <i class="fa-solid fa-chart-pie text-base"></i>
             <span>Tahlil</span>
         </button>
@@ -477,7 +503,7 @@
                 </button>
             </div>
 
-            <!-- Modal Body (Scrollable) -->
+            <!-- Modal Body -->
             <div class="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1">
                 
                 <!-- Debt Summary Banner & Primary Actions -->
@@ -543,18 +569,22 @@
                     </button>
                 </div>
 
-                <!-- SUB-FORM C: SMS / TELEGRAM REMINDER PREVIEW -->
+                <!-- SUB-FORM C: SMS / TELEGRAM REMINDER & IMAGE RECEIPT -->
                 <div id="reminderBox" class="hidden p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/30 space-y-3">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-500">
-                            <i class="fa-brands fa-telegram mr-1"></i> Eslatma va Elektron Chek Matni
+                            <i class="fa-brands fa-telegram mr-1"></i> Eslatma va Elektron Chek (.PNG)
                         </h4>
                         <button onclick="toggleModalSubForm('none')" class="text-xs text-slate-400">Yopish</button>
                     </div>
-                    <textarea id="reminderTextArea" rows="5" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono leading-relaxed outline-none"></textarea>
-                    <div class="flex gap-2">
-                        <button onclick="copyReminderText()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                    <textarea id="reminderTextArea" rows="4" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono leading-relaxed outline-none"></textarea>
+                    <canvas id="receiptCanvas" width="540" height="580" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"></canvas>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button onclick="copyReminderText()" class="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
                             <i class="fa-solid fa-copy"></i> Matndan nusxa olish
+                        </button>
+                        <button onclick="downloadReceiptImage()" class="py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-image"></i> Chekni rasm (.PNG) qilib saqlash
                         </button>
                     </div>
                 </div>
@@ -565,9 +595,7 @@
                         <span>Amaliyotlar tarixi (Olingan yuklar va to'lovlar)</span>
                         <span id="modalHistoryCount" class="text-[11px] font-semibold">0 ta yozuv</span>
                     </h4>
-                    <div id="modalTransactionsList" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                        <!-- Populated via JS -->
-                    </div>
+                    <div id="modalTransactionsList" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
                 </div>
 
             </div>
@@ -579,7 +607,7 @@
                         <i class="fa-solid fa-phone-volume"></i> Qo'ng'iroq qilish
                     </a>
                     <button onclick="generateReminderMessage()" class="px-3.5 py-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 text-xs font-bold flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-paper-plane"></i> Chek / Eslatma yuborish
+                        <i class="fa-solid fa-receipt"></i> Chek / Eslatma
                     </button>
                 </div>
                 <button onclick="deleteCurrentCustomer()" class="px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition" title="Mijozni o'chirish">
@@ -643,20 +671,83 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL 3: ALOQA UCHUN (Valiyev Yorqinbek) ==================== -->
+    <div id="contactModal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-slide-up">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-extrabold flex items-center gap-2">
+                    <i class="fa-solid fa-headset text-emerald-500"></i>
+                    Aloqa uchun
+                </h3>
+                <button onclick="closeContactModal()" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                Dastur asoschisi <b>Valiyev Yorqinbek</b> hisoblanadi. Dastur boʻyicha murojaat, shikoyat, talab va takliflarni quyidagi manzillarga yuboring:
+            </div>
+
+            <div class="space-y-2.5 text-xs font-bold">
+                <a href="tel:+998950346996" class="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 text-white flex items-center justify-between shadow-md active:scale-95 transition">
+                    <span><i class="fa-solid fa-phone mr-2"></i>Asosiy raqam:</span>
+                    <span class="font-mono">+998 95 034 69 96</span>
+                </a>
+                <a href="tel:+998935039877" class="w-full py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 flex items-center justify-between active:scale-95 transition">
+                    <span><i class="fa-solid fa-mobile-screen mr-2 text-emerald-500"></i>Qo'shimcha raqam:</span>
+                    <span class="font-mono">+998 93 503 98 77</span>
+                </a>
+                <a href="https://t.me/Valiyev20" target="_blank" rel="noopener noreferrer" class="w-full py-3.5 px-4 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/25 flex items-center justify-between active:scale-95 transition">
+                    <span><i class="fa-brands fa-telegram mr-2"></i>Telegram manzil:</span>
+                    <span class="font-mono">@Valiyev20</span>
+                </a>
+                <a href="https://instagram.com/artickle_uz" target="_blank" rel="noopener noreferrer" class="w-full py-3.5 px-4 rounded-2xl bg-pink-500/15 text-pink-600 dark:text-pink-400 border border-pink-500/25 flex items-center justify-between active:scale-95 transition">
+                    <span><i class="fa-brands fa-instagram mr-2"></i>Instagram manzil:</span>
+                    <span class="font-mono">@artickle_uz</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: TELEFON EKRANIGA O'RNATISH YO'RIQNOMASI ==================== -->
+    <div id="installGuideModal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-5 space-y-4 animate-slide-up text-xs">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-extrabold">📲 Ekranga ilova qilib chiqarish</h3>
+                <button onclick="document.getElementById('installGuideModal').classList.add('hidden')" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-slate-600 dark:text-slate-300">
+                <div class="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 space-y-1">
+                    <p class="font-bold text-slate-900 dark:text-white">🍏 iPhone (Safari orqali):</p>
+                    <p>1. Pastdagi <b>«Поделиться» (Ulashish)</b> tugmasini bosing.</p>
+                    <p>2. <b>«На экран „Домой“» (Add to Home Screen)</b> bandini tanlang va <b>Добавить</b> bosing.</p>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 space-y-1">
+                    <p class="font-bold text-slate-900 dark:text-white">🤖 Android (Chrome orqali):</p>
+                    <p>1. Yuqori o'ng burchakdagi <b>⋮ (3 nuqta)</b> menyusini bosing.</p>
+                    <p>2. <b>«Добавить на главный экран»</b> tugmasini bosing.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST NOTIFICATION -->
     <div id="toastContainer" class="fixed top-20 right-4 z-50 space-y-2 pointer-events-none"></div>
 
     <!-- APPLICATION JAVASCRIPT -->
     <script>
-        // ======================== STATE & DEMO DATA ========================
         const STORAGE_KEY = 'nasiya_uz_valiyev_v1';
         const STORE_NAME_KEY = 'nasiya_uz_store_name';
 
         let currentFilter = 'all';
         let activeCustomerId = null;
         let posCart = [];
+        let adminUnlocked = false;
+        let analyticsTapCount = 0;
+        let analyticsTapTimer = null;
 
-        // Quick Preset Minimarket Items
         const PRESET_PRODUCTS = [
             { name: "Buxanka non (2 ta)", price: 7000, icon: "fa-bread-slice" },
             { name: "Kungaboqar yog'i 1L", price: 19000, icon: "fa-bottle-droplet" },
@@ -669,7 +760,6 @@
             { name: "Sut va Qaymoq", price: 18000, icon: "fa-cow" }
         ];
 
-        // Helper for dynamic dates relative to today
         function getRelativeDate(offsetDays) {
             const d = new Date();
             d.setDate(d.getDate() + offsetDays);
@@ -696,11 +786,11 @@
                     name: "Dilnoza opa (Tikuvchi)",
                     phone: "+998 93 554 12 89",
                     trust: "warning",
-                    dueDate: getRelativeDate(-3), // Overdue
+                    dueDate: getRelativeDate(-3),
                     note: "Juma kuni beraman degan edi",
                     transactions: [
                         { id: 't201', type: 'debt', amount: 310000, items: "Ro'zg'orlik mahsulotlar, Go'sht va sabzavot", date: getRelativeDate(-12) },
-                        { id: 't202', type: 'Debt', amount: 55000, items: "Shirinliklar va kir yuvish kukuni", date: getRelativeDate(-5) }
+                        { id: 't202', type: 'debt', amount: 55000, items: "Shirinliklar va kir yuvish kukuni", date: getRelativeDate(-5) }
                     ]
                 },
                 {
@@ -708,7 +798,7 @@
                     name: "Javohir (Taksi haydovchi)",
                     phone: "+998 99 877 66 55",
                     trust: "normal",
-                    dueDate: getRelativeDate(1), // Due soon
+                    dueDate: getRelativeDate(1),
                     note: "Har hafta oxirida hisob-kitob qiladi",
                     transactions: [
                         { id: 't301', type: 'debt', amount: 135000, items: "Tamaki, Energetik, Non va Kolbasa", date: getRelativeDate(-3) },
@@ -731,7 +821,7 @@
                     name: "Sardorbek (Avtoservis)",
                     phone: "+998 94 611 09 09",
                     trust: "warning",
-                    dueDate: getRelativeDate(-5), // Overdue
+                    dueDate: getRelativeDate(-5),
                     note: "Qo'ng'iroq qilib eslatish kerak",
                     transactions: [
                         { id: 't501', type: 'debt', amount: 480000, items: "Bayram dasturxoni uchun bozorlik", date: getRelativeDate(-15) },
@@ -755,7 +845,6 @@
 
         let customers = [];
 
-        // ======================== INITIALIZATION ========================
         window.addEventListener('DOMContentLoaded', () => {
             loadData();
             initPosDefaults();
@@ -790,13 +879,13 @@
             }
         }
 
-        // ======================== CALCULATIONS & HELPERS ========================
         function getCustomerBalance(customer) {
             let totalDebt = 0;
             let totalPaid = 0;
             (customer.transactions || []).forEach(t => {
-                if (t.type.toLowerCase() === 'debt') totalDebt += Number(t.amount || 0);
-                if (t.type.toLowerCase() === 'payment') totalPaid += Number(t.amount || 0);
+                const tp = String(t.type || '').toLowerCase();
+                if (tp === 'debt') totalDebt += Number(t.amount || 0);
+                if (tp === 'payment') totalPaid += Number(t.amount || 0);
             });
             return Math.max(0, totalDebt - totalPaid);
         }
@@ -842,7 +931,6 @@
             }, 3000);
         }
 
-        // ======================== RENDER ENGINE ========================
         function renderAll() {
             renderKPIs();
             renderCustomers();
@@ -876,7 +964,7 @@
                 }
 
                 (c.transactions || []).forEach(t => {
-                    if (t.type.toLowerCase() === 'payment' && t.date === todayStr) {
+                    if (String(t.type || '').toLowerCase() === 'payment' && t.date === todayStr) {
                         todayCollected += Number(t.amount || 0);
                     }
                 });
@@ -889,7 +977,6 @@
             document.getElementById('kpiOverdueCount').textContent = `${overdueCount} ta`;
             document.getElementById('kpiOverdueSum').textContent = `${formatUZS(overdueSum)} kechikmoqda`;
 
-            // Top Bell Notification Badge
             const badge = document.getElementById('overdueBadgeCount');
             if (overdueCount > 0) {
                 badge.textContent = overdueCount;
@@ -898,7 +985,6 @@
                 badge.classList.add('hidden');
             }
 
-            // Update Filter Counts
             document.getElementById('count-all').textContent = `(${customers.length})`;
             document.getElementById('count-active').textContent = `(${activeDebtorsCount})`;
             document.getElementById('count-overdue').textContent = `(${overdueCount})`;
@@ -917,7 +1003,6 @@
                 const bal = getCustomerBalance(c);
                 const due = getDueStatus(c);
 
-                // Search query match
                 const matchesQuery = !query || 
                     c.name.toLowerCase().includes(query) || 
                     c.phone.toLowerCase().includes(query) || 
@@ -925,7 +1010,6 @@
 
                 if (!matchesQuery) return false;
 
-                // Filter pill match
                 if (currentFilter === 'active') return bal > 0;
                 if (currentFilter === 'overdue') return bal > 0 && due.status === 'overdue';
                 if (currentFilter === 'soon') return bal > 0 && due.status === 'soon';
@@ -934,7 +1018,6 @@
                 return true;
             });
 
-            // Sorting
             filtered.sort((a, b) => {
                 const balA = getCustomerBalance(a);
                 const balB = getCustomerBalance(b);
@@ -942,6 +1025,11 @@
                 if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
                 if (sortBy === 'due_asc') {
                     return new Date(a.dueDate || '2099-01-01') - new Date(b.dueDate || '2099-01-01');
+                }
+                if (sortBy === 'recent') {
+                    const lastA = (a.transactions && a.transactions.length) ? a.transactions[a.transactions.length - 1].date : '1970-01-01';
+                    const lastB = (b.transactions && b.transactions.length) ? b.transactions[b.transactions.length - 1].date : '1970-01-01';
+                    return new Date(lastB) - new Date(lastA);
                 }
                 return 0;
             });
@@ -961,7 +1049,6 @@
                 const due = getDueStatus(c);
                 const initials = c.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
                 
-                // Last transaction item preview
                 const lastTx = (c.transactions && c.transactions.length > 0) 
                     ? c.transactions[c.transactions.length - 1] 
                     : null;
@@ -981,10 +1068,11 @@
                     ? '<i class="fa-solid fa-star text-amber-400 text-xs" title="Ishonchli mijoz"></i>' 
                     : (c.trust === 'warning' ? '<i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs" title="Kechiktiruvchi"></i>' : '');
 
+                const isLastDebt = lastTx && String(lastTx.type || '').toLowerCase() === 'debt';
+
                 return `
                 <div onclick="openCustomerModal('${c.id}')" class="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/50 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
                     <div>
-                        <!-- Top Row: Avatar, Name & Status -->
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-3">
                                 <div class="w-11 h-11 rounded-2xl ${bal > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'} font-extrabold text-sm flex items-center justify-center shrink-0">
@@ -992,7 +1080,7 @@
                                 </div>
                                 <div>
                                     <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-emerald-500 transition flex items-center gap-1.5">
-                                        <span class=" line-clamp-1">${c.name}</span>
+                                        <span class="line-clamp-1">${c.name}</span>
                                         ${trustIcon}
                                     </h3>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">${c.phone}</p>
@@ -1001,13 +1089,11 @@
                             ${statusBadgeHTML}
                         </div>
 
-                        <!-- Recent Item Note -->
                         <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
-                            ${lastTx ? `<i class="fa-solid fa-clock-rotate-left mr-1 opacity-70"></i> Oxirgi: ${lastTx.type === 'debt' ? lastTx.items : 'To\'lov (' + formatUZS(lastTx.amount) + ')'}` : (c.note || 'Yozuv mavjud emas')}
+                            ${lastTx ? `<i class="fa-solid fa-clock-rotate-left mr-1 opacity-70"></i> Oxirgi: ${isLastDebt ? lastTx.items : 'To\'lov (' + formatUZS(lastTx.amount) + ')'}` : (c.note || 'Yozuv mavjud emas')}
                         </div>
                     </div>
 
-                    <!-- Bottom Row: Total Debt & Quick Buttons -->
                     <div class="flex items-end justify-between pt-1">
                         <div>
                             <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Joriy nasiya</span>
@@ -1016,10 +1102,10 @@
                             </span>
                         </div>
                         <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
-                            <button onclick="openCustomerModalWithAction('${c.id}', 'addDebtForm')" class="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-slate-950 text-xs font-bold transition" title="Nasiya qo'shish">
+                            <button onclick="openCustomerModalWithAction('${c.id}', 'addDebtForm')" class="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-slate-950 text-xs font-bold transition">
                                 + Nasiya
                             </button>
-                            <button onclick="openCustomerModalWithAction('${c.id}', 'payDebtForm')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-slate-950 text-xs font-bold transition" title="To'lov qabul qilish">
+                            <button onclick="openCustomerModalWithAction('${c.id}', 'payDebtForm')" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 dark:text-emerald-400 hover:text-slate-950 text-xs font-bold transition">
                                 To'lov
                             </button>
                         </div>
@@ -1029,7 +1115,6 @@
             }).join('');
         }
 
-        // ======================== FILTER & NAVIGATION ========================
         function setFilter(filterName) {
             currentFilter = filterName;
             document.querySelectorAll('.filter-pill').forEach(btn => {
@@ -1053,15 +1138,33 @@
             document.getElementById('tab-dashboard').scrollIntoView({ behavior: 'smooth' });
         }
 
+        // Tahlil tugmasini 5 marta bosganda Valiyev20 parol so'rash
+        function handleAnalyticsTabClick() {
+            switchTab('analytics');
+            analyticsTapCount++;
+            clearTimeout(analyticsTapTimer);
+            if (analyticsTapCount >= 5) {
+                analyticsTapCount = 0;
+                const pwd = prompt("🔐 PRO Admin parolini kiriting:");
+                if (pwd === 'Valiyev20') {
+                    adminUnlocked = true;
+                    document.getElementById('adminUnlockedBadge').classList.remove('hidden');
+                    showToast("PRO Admin rejimi faollashtirildi!", "info");
+                } else if (pwd !== null) {
+                    showToast("Parol noto'g'ri!", "error");
+                }
+            } else {
+                analyticsTapTimer = setTimeout(() => { analyticsTapCount = 0; }, 1500);
+            }
+        }
+
         function switchTab(tabId) {
             ['dashboard', 'pos', 'analytics'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
-                // Desktop nav
                 const dBtn = document.getElementById(`nav-${t}`);
                 if (dBtn) {
                     dBtn.className = "nav-btn px-4 py-1.5 rounded-lg text-sm font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
                 }
-                // Mobile nav
                 const mBtn = document.getElementById(`mnav-${t}`);
                 if (mBtn) {
                     mBtn.className = "flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-slate-500 dark:text-slate-400 font-medium text-xs";
@@ -1082,14 +1185,12 @@
             if (tabId === 'analytics') renderAnalytics();
         }
 
-        // ======================== CUSTOMER MODAL & LEDGER ACTIONS ========================
         function openCustomerModal(customerId) {
             const c = customers.find(x => x.id === customerId);
             if (!c) return;
             activeCustomerId = customerId;
 
             const bal = getCustomerBalance(c);
-            const due = getDueStatus(c);
 
             document.getElementById('modalCustomerAvatar').textContent = c.name.charAt(0).toUpperCase();
             document.getElementById('modalCustomerName').textContent = c.name;
@@ -1099,7 +1200,6 @@
             document.getElementById('modalCustomerNote').textContent = c.note ? `"${c.note}"` : '';
             document.getElementById('modalCallLink').href = `tel:${c.phone.replace(/\s+/g, '')}`;
 
-            // Trust Badge
             const trustBadge = document.getElementById('modalTrustBadge');
             if (c.trust === 'trusted') {
                 trustBadge.textContent = "⭐ Ishonchli mijoz";
@@ -1112,11 +1212,9 @@
                 trustBadge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300";
             }
 
-            // Default due date input
             document.getElementById('modalDebtDueDate').value = c.dueDate || getRelativeDate(7);
             toggleModalSubForm('none');
 
-            // Render Transactions History
             const txList = document.getElementById('modalTransactionsList');
             const txs = [...(c.transactions || [])].reverse();
             document.getElementById('modalHistoryCount').textContent = `${txs.length} ta yozuv`;
@@ -1125,7 +1223,7 @@
                 txList.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">Hozircha amaliyotlar tarixi bo'sh</div>`;
             } else {
                 txList.innerHTML = txs.map(t => {
-                    const isDebt = t.type.toLowerCase() === 'debt';
+                    const isDebt = String(t.type || '').toLowerCase() === 'debt';
                     return `
                     <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3">
@@ -1248,10 +1346,92 @@
                         `🏪 "${storeName}" do'konidan eslatma:\n` +
                         `📌 Sizning joriy nasiya qarzingiz: ${formatUZS(bal)}\n` +
                         `📅 Belgilangan to'lov muddati: ${c.dueDate || 'Yaqin kunlarda'}\n\n` +
-                        `Iltimos, imkon qadar to'lovni amalga oshirishingizni so'raymiz. Xaridingiz va ishonchingiz uchun rahmat! (Nasiya.uz tizimi)`;
+                        `Iltimos, imkon qadar to'lovni amalga oshirishingizni so'raymiz. Xaridingiz va ishonchingiz uchun rahmat! (Nasiya.uz by: Valiyev)`;
 
             document.getElementById('reminderTextArea').value = msg;
+            drawCanvasReceipt(c, storeName, bal);
             toggleModalSubForm('reminderBox');
+        }
+
+        function drawCanvasReceipt(c, storeName, bal) {
+            const canvas = document.getElementById('receiptCanvas');
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = '#059669';
+            ctx.fillRect(0, 0, W, 105);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 26px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(storeName.toUpperCase(), W / 2, 48);
+            ctx.font = '600 15px Inter, sans-serif';
+            ctx.fillStyle = '#d1fae5';
+            ctx.fillText('Nasiya.uz by: Valiyev • Elektron Chek', W / 2, 78);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '700 20px Inter, sans-serif';
+            ctx.fillText(`Mijoz: ${c.name}`, 32, 150);
+            ctx.font = '500 16px Inter, sans-serif';
+            ctx.fillStyle = '#475569';
+            ctx.fillText(`Telefon: ${c.phone}`, 32, 180);
+            ctx.fillText(`To'lov muddati: ${c.dueDate || '-'}`, 32, 208);
+
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(32, 230);
+            ctx.lineTo(W - 32, 230);
+            ctx.stroke();
+
+            let totalDebt = 0, totalPaid = 0;
+            (c.transactions || []).forEach(t => {
+                if (String(t.type).toLowerCase() === 'debt') totalDebt += Number(t.amount || 0);
+                if (String(t.type).toLowerCase() === 'payment') totalPaid += Number(t.amount || 0);
+            });
+
+            ctx.font = '600 17px Inter, sans-serif';
+            ctx.fillStyle = '#334155';
+            ctx.fillText('Jami olingan nasiya:', 32, 272);
+            ctx.textAlign = 'right';
+            ctx.fillText(formatUZS(totalDebt), W - 32, 272);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#059669';
+            ctx.fillText('Jami to\'langan summa:', 32, 310);
+            ctx.textAlign = 'right';
+            ctx.fillText(formatUZS(totalPaid), W - 32, 310);
+
+            ctx.fillStyle = '#fef2f2';
+            ctx.fillRect(30, 350, W - 60, 115);
+            ctx.strokeStyle = '#ef4444';
+            ctx.strokeRect(30, 350, W - 60, 115);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#dc2626';
+            ctx.font = '700 16px Inter, sans-serif';
+            ctx.fillText('JORIY QARZ QOLDIG\'I:', W / 2, 385);
+            ctx.font = '800 36px Inter, sans-serif';
+            ctx.fillText(formatUZS(bal), W / 2, 435);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '500 13px Inter, sans-serif';
+            ctx.fillText(`Sana: ${new Date().toLocaleString('uz-UZ')}`, W / 2, 515);
+            ctx.fillText('Dastur asoschisi: Valiyev Yorqinbek | +998 95 034 69 96', W / 2, 545);
+        }
+
+        function downloadReceiptImage() {
+            const c = customers.find(x => x.id === activeCustomerId);
+            const canvas = document.getElementById('receiptCanvas');
+            const a = document.createElement('a');
+            a.download = `Chek_${c ? c.name : 'Mijoz'}.png`;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+            showToast("Elektron chek rasm (.PNG) sifatida saqlandi!");
         }
 
         function copyReminderText() {
@@ -1263,6 +1443,7 @@
 
         function deleteCurrentCustomer() {
             if (!activeCustomerId) return;
+            if (!confirm("Ushbu mijozni ro'yxatdan o'chirmoqchimisiz?")) return;
             customers = customers.filter(x => x.id !== activeCustomerId);
             saveData();
             closeCustomerModal();
@@ -1270,7 +1451,6 @@
             showToast("Mijoz ro'yxatdan o'chirildi", "warning");
         }
 
-        // ======================== NEW CUSTOMER MODAL ========================
         function openNewCustomerModal() {
             document.getElementById('newCustName').value = '';
             document.getElementById('newCustPhone').value = '+998 ';
@@ -1324,7 +1504,6 @@
             showToast(`${name} muvaffaqiyatli qo'shildi!`);
         }
 
-        // ======================== QUICK POS / CALCULATOR ========================
         function initPosDefaults() {
             document.getElementById('posDueDate').value = getRelativeDate(7);
             const grid = document.getElementById('quickProductsGrid');
@@ -1459,15 +1638,15 @@
             switchTab('dashboard');
         }
 
-        // ======================== ANALYTICS & EXPORT ========================
         function renderAnalytics() {
             let totalGiven = 0;
             let totalPaid = 0;
 
             customers.forEach(c => {
                 (c.transactions || []).forEach(t => {
-                    if (t.type.toLowerCase() === 'debt') totalGiven += Number(t.amount || 0);
-                    if (t.type.toLowerCase() === 'payment') totalPaid += Number(t.amount || 0);
+                    const tp = String(t.type || '').toLowerCase();
+                    if (tp === 'debt') totalGiven += Number(t.amount || 0);
+                    if (tp === 'payment') totalPaid += Number(t.amount || 0);
                 });
             });
 
@@ -1478,7 +1657,6 @@
             document.getElementById('analyticsTotalGiven').textContent = `Jami berilgan: ${formatUZS(totalGiven)}`;
             document.getElementById('analyticsTotalPaid').textContent = `Jami qaytarilgan: ${formatUZS(totalPaid)}`;
 
-            // Top 5 Debtors
             const sorted = [...customers]
                 .map(c => ({ ...c, balance: getCustomerBalance(c) }))
                 .filter(c => c.balance > 0)
@@ -1544,14 +1722,50 @@
             showToast("Zaxira nusxa (JSON) yuklab olindi!");
         }
 
+        function importFromJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed)) {
+                        customers = parsed;
+                        saveData();
+                        renderAll();
+                        showToast("Zaxira nusxa muvaffaqiyatli tiklandi!");
+                    }
+                } catch (err) {
+                    showToast("Fayl formati xato!", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
         function resetDemoData() {
+            if (!adminUnlocked) {
+                const pwd = prompt("Ma'lumotlarni tiklash uchun Admin parolini kiriting (Valiyev20):");
+                if (pwd !== 'Valiyev20') {
+                    showToast("Parol xato! O'chirish rad etildi.", "error");
+                    return;
+                }
+            }
             customers = getInitialDemoCustomers();
             saveData();
             renderAll();
             showToast("Boshlang'ich demo ma'lumotlar tiklandi!", "info");
         }
 
-        // ======================== THEME TOGGLE ========================
+        function openContactModal() {
+            document.getElementById('contactModal').classList.remove('hidden');
+        }
+        function closeContactModal() {
+            document.getElementById('contactModal').classList.add('hidden');
+        }
+        function openInstallGuideModal() {
+            document.getElementById('installGuideModal').classList.remove('hidden');
+        }
+
         function toggleTheme() {
             const html = document.documentElement;
             const icon = document.getElementById('themeIcon');
